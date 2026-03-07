@@ -1,0 +1,9 @@
+pandas
+numpy
+scikit-learn
+lifelines
+streamlit
+matplotlib
+seaborn
+joblib
+sqlite3
