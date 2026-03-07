@@ -6,4 +6,3 @@ streamlit
 matplotlib
 seaborn
 joblib
-sqlite3
