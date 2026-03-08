@@ -126,16 +126,18 @@ compared to the average population, while values below **1** indicate lower risk
 
     # Survival curve
     patient_survival = cox_model.predict_survival_function(patient_cox)
+    baseline_survival = cox_model.baseline_survival_
 
     fig, ax = plt.subplots()
 
+    baseline_survival.plot(ax=ax,label="Average Population Risk",color="blue")
     patient_survival.plot(ax=ax,label="Patient Risk",color="red")
 
     plt.title("Probability of Remaining Diabetes-Free Over Time")
-
     plt.xlabel("Age")
+    plt.ylabel("Survival Probability")
 
-    plt.ylabel("Probability of Remaining Non-Diabetic")
+    plt.legend()
 
     st.pyplot(fig)
 
