@@ -95,9 +95,7 @@ if st.button('Predict Risk'):
 
     st.write('Relative Risk Score:',round(float(risk),4))
     patient_survival = cox_model.predict_survival_function(patient)
-    patient_baseline = cox_model.predict_survival_function(baseline)
-    fig, ax= plt.subplots()
-    patient_baseline.plot(ax=ax,label="Average Population",color="blue")
+    fig, ax= plt.plot()
     patient_survival.plot(ax=ax,label="Patient Risk",color="red")
     plt.title('Diabetes Risk Over Time')
     plt.xlabel('Age')
