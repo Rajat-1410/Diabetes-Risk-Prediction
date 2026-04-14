@@ -174,8 +174,8 @@ Faster drop = higher risk
 """)
 
     # ---------- VARIABLE INFO ----
-st.markdown("📘 Variable Descriptions"):
-        st.markdown("""
+st.markdown("📘 Variable Descriptions")
+st.markdown("""
 - Age: Proxy for time  
 - HbA1c: Long-term glucose  
 - FBS/PP2: Blood sugar levels  
