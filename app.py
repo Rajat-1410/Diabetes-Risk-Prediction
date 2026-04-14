@@ -173,8 +173,8 @@ Faster drop = higher risk
 ⚠️ This shows relative trends, not exact prediction.
 """)
 
-    # ---------- VARIABLE INFO ----------
-    with st.expander("📘 Variable Descriptions"):
+    # ---------- VARIABLE INFO ----
+st.markdown("📘 Variable Descriptions"):
         st.markdown("""
 - Age: Proxy for time  
 - HbA1c: Long-term glucose  
