@@ -94,7 +94,6 @@ if st.button("🔍 Predict Risk", use_container_width=True):
     with colA:
         st.subheader("📊 Current Risk (ML Model)")
 
-        ml_pred = rf_model.predict(patient)[0]
         ml_prob = rf_model.predict_proba(patient)[0][1]
 
         if ml_prob > 0.7:
@@ -106,46 +105,44 @@ if st.button("🔍 Predict Risk", use_container_width=True):
 
         st.progress(float(ml_prob))
 
-    # ---------- COX MODEL (CONSISTENT) ----------
+    # ---------- COX MODEL ----------
     with colB:
         st.subheader("📈 Future Risk (Survival Analysis)")
 
         cox_model = cox_male if gender == "Male" else cox_female
-
         patient_cox = patient[cox_model.params_.index]
 
+        # Raw risk
         risk_raw = cox_model.predict_partial_hazard(patient_cox).values[0]
 
+        # Log scaled risk
         risk_display = np.log(risk_raw + 1)
 
         if risk_display > 1.2:
             st.error(f"🔴 High Relative Risk: {risk_display:.2f}")
         elif risk_display > 0.7:
-              st.warning(f"🟠 Moderate Risk: {risk_display:.2f}")
+            st.warning(f"🟠 Moderate Risk: {risk_display:.2f}")
         else:
-              st.success(f"🟢 Low Risk: {risk_display:.2f}")
+            st.success(f"🟢 Low Risk: {risk_display:.2f}")
 
-      risk_percent = np.clip((risk_display / 3) * 100, 0, 100)
-      st.progress(risk_percent / 100)
+        risk_percent = np.clip((risk_display / 3) * 100, 0, 100)
+        st.progress(risk_percent / 100)
 
-      st.caption("Note: Relative risk is log-scaled for better interpretability.")
-    # ---------- SURVIVAL CURVE (CONSISTENT) ----------
+        st.caption("Note: Relative risk is log-scaled for interpretability.")
+
+    # ---------- SURVIVAL CURVE ----------
     st.subheader("📉 Survival Curve Comparison")
 
     baseline_survival = cox_model.baseline_survival_
 
-    # Use SAME risk value (no recomputation)
     risk_clipped = np.clip(risk_raw, 0.5, 2.0)
-
     risk_low = risk_clipped * 0.8
     risk_high = risk_clipped * 1.2
 
-    # Generate curves
     patient_survival = baseline_survival ** risk_clipped
     low_surv = baseline_survival ** risk_low
     high_surv = baseline_survival ** risk_high
 
-    # Plot
     fig, ax = plt.subplots()
 
     baseline_survival.plot(ax=ax)
@@ -156,47 +153,37 @@ if st.button("🔍 Predict Risk", use_container_width=True):
     ax.set_title("Diabetes-Free Survival Probability")
     ax.set_xlabel("Age")
     ax.set_ylabel("Survival Probability")
-
     ax.legend(["Population", "Patient", "Lower Risk", "Higher Risk"])
 
     st.pyplot(fig)
 
-    # ---------- INTERPRETATION ----------
+    # ---------- GRAPH EXPLANATION ----------
     with st.expander("📘 How to understand this graph"):
         st.markdown("""
 ### 📉 Understanding the Graph
 
-This graph shows how diabetes risk may change with age.
+- 🔵 Population → Average risk  
+- 🟠 You → Your predicted risk  
+- 🟢 Lower → Better scenario  
+- 🔴 Higher → Worse scenario  
 
-**Lines in the graph:**
-- 🔵 **Blue (Population):** Average risk in the general population  
-- 🟠 **Orange (You):** Your predicted risk  
-- 🟢 **Green:** Lower-risk scenario  
-- 🔴 **Red:** Higher-risk scenario  
+Higher line = lower risk  
+Faster drop = higher risk  
 
-**How to read it:**
-- If your line is **below blue** → higher risk than average  
-- If your line is **above blue** → lower risk than average  
-- Faster drop → higher risk  
-
-⚠️ This shows relative risk trends, not exact prediction.
+⚠️ This shows relative trends, not exact prediction.
 """)
-st.markdown(" The Different variables and their meaning are:-")
-st.markdown("""
-    - **Age**: Used as a proxy for time in survival analysis  
-    - **HbA1c(Glycated Haemoglobin )**: Long-term blood sugar indicator  
-    - **FBS**: Fasting blood glucose level  
-    - **PP2**: Blood sugar level after meals  
-    - **BMI**: Indicator of body fat  
-    - **Waist-Hip Ratio**: Measures fat distribution  
-    - **Triglycerides**: Type of fat in blood  
-    - **HDL**: “Good” cholesterol  
-    - **Chol/HDL**: Cardiovascular risk indicator  
-    - **LDL/HDL**: Balance of bad vs good cholesterol  
-    - **Tobacco/Alcohol**: Lifestyle risk factors  
-    - **Physical Activity**: Level of daily activity  
-    """)
+
+    # ---------- VARIABLE INFO ----------
+    with st.expander("📘 Variable Descriptions"):
+        st.markdown("""
+- Age: Proxy for time  
+- HbA1c: Long-term glucose  
+- FBS/PP2: Blood sugar levels  
+- BMI: Body fat indicator  
+- Lipids: Cholesterol balance  
+- Lifestyle: Tobacco, alcohol, activity  
+""")
+
 # -------------------- FOOTER --------------------
 st.divider()
-st.caption("⚠️ For educational purposes only. Not a medical diagnosis tool.")
-st.caption("Note: Age is used as a proxy for time. Curves are scaled for interpretability.")
+st.caption("⚠️ For educational purposes only.")
