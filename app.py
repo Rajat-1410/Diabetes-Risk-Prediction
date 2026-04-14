@@ -158,7 +158,7 @@ if st.button("🔍 Predict Risk", use_container_width=True):
     st.pyplot(fig)
 
     # ---------- INTERPRETATION ----------
-    with st.expander("📘 How to understand this graph"):
+    st.expander("📘 How to understand this graph"):
     st.markdown("""
     This graph shows how diabetes risk may change with age.
 
