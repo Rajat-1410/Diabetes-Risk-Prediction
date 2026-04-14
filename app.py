@@ -106,41 +106,38 @@ if st.button("🔍 Predict Risk", use_container_width=True):
 
         st.progress(float(ml_prob))
 
-    # ---------- COX MODEL ----------
+    # ---------- COX MODEL (CONSISTENT) ----------
     with colB:
         st.subheader("📈 Future Risk (Survival Analysis)")
 
         cox_model = cox_male if gender == "Male" else cox_female
+
+        # Ensure correct column order
         patient_cox = patient[cox_model.params_.index]
 
-        risk = cox_model.predict_partial_hazard(patient_cox).values[0]
+        # Extract risk ONCE (stable)
+        risk_patient = cox_model.predict_partial_hazard(patient_cox).values[0]
 
-        if risk > 1.5:
-            st.error(f"🔴 High Relative Risk: {risk:.2f}")
-        elif risk > 1:
-            st.warning(f"🟠 Moderate Risk: {risk:.2f}")
+        if risk_patient > 1.5:
+            st.error(f"🔴 High Relative Risk: {risk_patient:.2f}")
+        elif risk_patient > 1:
+            st.warning(f"🟠 Moderate Risk: {risk_patient:.2f}")
         else:
-            st.success(f"🟢 Low Risk: {risk:.2f}")
+            st.success(f"🟢 Low Risk: {risk_patient:.2f}")
 
-    # ---------- SURVIVAL CURVE (FINAL FIX) ----------
+    # ---------- SURVIVAL CURVE (CONSISTENT) ----------
     st.subheader("📉 Survival Curve Comparison")
-
-    cox_model = cox_male if gender == "Male" else cox_female
-    patient_cox = patient[cox_model.params_.index]
 
     baseline_survival = cox_model.baseline_survival_
 
-    # Get raw hazard
-    risk_patient = float(cox_model.predict_partial_hazard(patient_cox).values[0])
+    # Use SAME risk value (no recomputation)
+    risk_clipped = np.clip(risk_patient, 0.5, 2.0)
 
-    #  NORMALIZATION (KEY FIX)
-    risk_patient = np.clip(risk_patient, 0.5, 2.0)
-
-    risk_low = risk_patient * 0.8
-    risk_high = risk_patient * 1.2
+    risk_low = risk_clipped * 0.8
+    risk_high = risk_clipped * 1.2
 
     # Generate curves
-    patient_survival = baseline_survival ** risk_patient
+    patient_survival = baseline_survival ** risk_clipped
     low_surv = baseline_survival ** risk_low
     high_surv = baseline_survival ** risk_high
 
@@ -168,8 +165,22 @@ if st.button("🔍 Predict Risk", use_container_width=True):
 
     Faster drop = higher diabetes risk over time.
     """)
-
+st.markdown(" The Different variables and their meaning are:-")
+st.markdown("""
+    - **Age**: Used as a proxy for time in survival analysis  
+    - **HbA1c**: Long-term blood sugar indicator  
+    - **FBS**: Fasting blood glucose level  
+    - **PP2**: Blood sugar level after meals  
+    - **BMI**: Indicator of body fat  
+    - **Waist-Hip Ratio**: Measures fat distribution  
+    - **Triglycerides**: Type of fat in blood  
+    - **HDL**: “Good” cholesterol  
+    - **Chol/HDL**: Cardiovascular risk indicator  
+    - **LDL/HDL**: Balance of bad vs good cholesterol  
+    - **Tobacco/Alcohol**: Lifestyle risk factors  
+    - **Physical Activity**: Level of daily activity  
+    """)
 # -------------------- FOOTER --------------------
 st.divider()
 st.caption("⚠️ For educational purposes only. Not a medical diagnosis tool.")
-st.caption("Note: Curves are scaled for interpretability due to proxy time assumption.")
+st.caption("Note: Age is used as a proxy for time. Curves are scaled for interpretability.")
