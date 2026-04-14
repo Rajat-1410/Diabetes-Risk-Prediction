@@ -158,17 +158,27 @@ if st.button("🔍 Predict Risk", use_container_width=True):
     st.pyplot(fig)
 
     # ---------- INTERPRETATION ----------
-    st.info("""
-    • Population = baseline risk  
-    • Patient = your predicted profile  
-    • Low/High = comparative scenarios  
+    with st.expander("📘 How to understand this graph"):
+    st.markdown("""
+    This graph shows how diabetes risk may change with age.
 
-    Faster drop = higher diabetes risk over time.
+    **Lines in the graph:**
+    - **🔵 Blue (Population):** Average risk in the general population  
+    - **🟠 Orange (You):** Your predicted risk  
+    - **🟢 Green:** Lower-risk scenario  
+    - **🔴 Red:** Higher-risk scenario  
+
+    **How to read it:**
+    - If your line is **below blue** → higher risk than average  
+    - If your line is **above blue** → lower risk than average  
+    - Faster drop → higher risk  
+
+    ⚠️ This shows relative risk trends, not exact prediction.
     """)
 st.markdown(" The Different variables and their meaning are:-")
 st.markdown("""
     - **Age**: Used as a proxy for time in survival analysis  
-    - **HbA1c**: Long-term blood sugar indicator  
+    - **HbA1c(Glycated Haemoglobin )**: Long-term blood sugar indicator  
     - **FBS**: Fasting blood glucose level  
     - **PP2**: Blood sugar level after meals  
     - **BMI**: Indicator of body fat  
