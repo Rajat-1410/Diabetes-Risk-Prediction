@@ -108,22 +108,33 @@ if st.button("🔍 Predict Risk", use_container_width=True):
 
     # ---------- COX MODEL (CONSISTENT) ----------
     with colB:
-        st.subheader("📈 Future Risk (Survival Analysis)")
+    st.subheader("📈 Future Risk (Survival Analysis)")
 
-        cox_model = cox_male if gender == "Male" else cox_female
+    cox_model = cox_male if gender == "Male" else cox_female
 
-        # Ensure correct column order
-        patient_cox = patient[cox_model.params_.index]
+    # Ensure correct column order
+    patient_cox = patient[cox_model.params_.index]
 
-        # Extract risk ONCE (stable)
-        risk_patient = cox_model.predict_partial_hazard(patient_cox).values[0]
+    # Raw risk (can be very large)
+    risk_raw = cox_model.predict_partial_hazard(patient_cox).values[0]
 
-        if risk_patient > 1.5:
-            st.error(f"🔴 High Relative Risk: {risk_patient:.2f}")
-        elif risk_patient > 1:
-            st.warning(f"🟠 Moderate Risk: {risk_patient:.2f}")
-        else:
-            st.success(f"🟢 Low Risk: {risk_patient:.2f}")
+    # 🔥 Log scaling for interpretability
+    risk_display = np.log(risk_raw + 1)
+
+    # Classification based on scaled risk
+    if risk_display > 1.2:
+        st.error(f"🔴 High Relative Risk: {risk_display:.2f}")
+    elif risk_display > 0.7:
+        st.warning(f"🟠 Moderate Risk: {risk_display:.2f}")
+    else:
+        st.success(f"🟢 Low Risk: {risk_display:.2f}")
+
+    # Optional: show progress bar
+    risk_percent = np.clip((risk_display / 3) * 100, 0, 100)
+    st.progress(risk_percent / 100)
+
+    # Optional explanation
+    st.caption("Note: Relative risk is log-scaled for better interpretability.")
 
     # ---------- SURVIVAL CURVE (CONSISTENT) ----------
     st.subheader("📉 Survival Curve Comparison")
@@ -131,7 +142,7 @@ if st.button("🔍 Predict Risk", use_container_width=True):
     baseline_survival = cox_model.baseline_survival_
 
     # Use SAME risk value (no recomputation)
-    risk_clipped = np.clip(risk_patient, 0.5, 2.0)
+    risk_clipped = np.clip(risk_raw, 0.5, 2.0)
 
     risk_low = risk_clipped * 0.8
     risk_high = risk_clipped * 1.2
