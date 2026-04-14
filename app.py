@@ -113,7 +113,7 @@ if st.button("🔍 Predict Risk", use_container_width=True):
         cox_model = cox_male if gender == "Male" else cox_female
         patient_cox = patient[cox_model.params_.index]
 
-        risk = float(cox_model.predict_partial_hazard(patient_cox))
+        risk = cox_model.predict_partial_hazard(patient_cox).values[0]
 
         if risk > 1.5:
             st.error(f"🔴 High Relative Risk: {risk:.2f}")
