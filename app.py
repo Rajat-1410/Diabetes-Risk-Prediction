@@ -108,34 +108,27 @@ if st.button("🔍 Predict Risk", use_container_width=True):
 
     # ---------- COX MODEL (CONSISTENT) ----------
     with colB:
-    st.subheader("📈 Future Risk (Survival Analysis)")
+        st.subheader("📈 Future Risk (Survival Analysis)")
 
-    cox_model = cox_male if gender == "Male" else cox_female
+        cox_model = cox_male if gender == "Male" else cox_female
 
-    # Ensure correct column order
-    patient_cox = patient[cox_model.params_.index]
+        patient_cox = patient[cox_model.params_.index]
 
-    # Raw risk (can be very large)
-    risk_raw = cox_model.predict_partial_hazard(patient_cox).values[0]
+        risk_raw = cox_model.predict_partial_hazard(patient_cox).values[0]
 
-    # 🔥 Log scaling for interpretability
-    risk_display = np.log(risk_raw + 1)
+        risk_display = np.log(risk_raw + 1)
 
-    # Classification based on scaled risk
-    if risk_display > 1.2:
-        st.error(f"🔴 High Relative Risk: {risk_display:.2f}")
-    elif risk_display > 0.7:
-        st.warning(f"🟠 Moderate Risk: {risk_display:.2f}")
-    else:
-        st.success(f"🟢 Low Risk: {risk_display:.2f}")
+        if risk_display > 1.2:
+            st.error(f"🔴 High Relative Risk: {risk_display:.2f}")
+        elif risk_display > 0.7:
+              st.warning(f"🟠 Moderate Risk: {risk_display:.2f}")
+        else:
+              st.success(f"🟢 Low Risk: {risk_display:.2f}")
 
-    # Optional: show progress bar
-    risk_percent = np.clip((risk_display / 3) * 100, 0, 100)
-    st.progress(risk_percent / 100)
+      risk_percent = np.clip((risk_display / 3) * 100, 0, 100)
+      st.progress(risk_percent / 100)
 
-    # Optional explanation
-    st.caption("Note: Relative risk is log-scaled for better interpretability.")
-
+      st.caption("Note: Relative risk is log-scaled for better interpretability.")
     # ---------- SURVIVAL CURVE (CONSISTENT) ----------
     st.subheader("📉 Survival Curve Comparison")
 
