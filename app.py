@@ -4,154 +4,172 @@ import numpy as np
 import joblib
 import matplotlib.pyplot as plt
 
-# Load models
-rf_model = joblib.load('Models/random_forest_model.pkl')
-cox_male = joblib.load('Models/cox_male.pkl')
-cox_female = joblib.load('Models/cox_female.pkl')
+# -------------------- CONFIG --------------------
+st.set_page_config(page_title="Diabetes Risk Predictor", layout="wide")
 
-# Title
-st.title("Type 2 Diabetes Risk Prediction System")
+# -------------------- LOAD MODELS --------------------
+@st.cache_resource
+def load_models():
+    rf = joblib.load('Models/random_forest_model.pkl')
+    cox_m = joblib.load('Models/cox_male.pkl')
+    cox_f = joblib.load('Models/cox_female.pkl')
+    return rf, cox_m, cox_f
 
-st.write("""
-This application estimates the **risk of Type 2 Diabetes** using two analytical approaches:
+rf_model, cox_male, cox_female = load_models()
 
-• **Machine Learning (Random Forest)** — predicts whether an individual is currently at high risk.  
-• **Survival Analysis (Cox Proportional Hazard Model)** — estimates the **future progression risk** of diabetes.
-
-The system uses metabolic indicators and lifestyle factors commonly associated with diabetes development.
+# -------------------- TITLE --------------------
+st.title("🩺 Type 2 Diabetes Risk Prediction System")
+st.markdown("""
+Predict **current risk (Machine Learning)** and **future risk (Survival Analysis)**  
+using clinical and lifestyle parameters.
 """)
 
-st.markdown("---")
+st.divider()
 
-# Patient information
-st.header("Patient Information")
+# -------------------- INPUT --------------------
+st.header("Patient Details")
 
-age = st.number_input("Age (years)", 20, 90)
+col1, col2, col3 = st.columns(3)
 
-gender = st.selectbox("Gender", ["Male","Female"])
+with col1:
+    age = st.number_input("Age", 20, 90, 30)
+    gender = st.selectbox("Gender", ["Male", "Female"])
+    bmi = st.number_input("BMI", 10.0, 60.0, 25.0)
+    waist_hip = st.number_input("Waist-Hip Ratio", 0.5, 2.0, 0.9)
 
-hba1c = st.number_input("HbA1c (Average blood glucose over 3 months)", step=0.1)
+with col2:
+    hba1c = st.number_input("HbA1c", 3.0, 15.0, 5.5)
+    fbs = st.number_input("Fasting Blood Sugar", 50, 300, 100)
+    pp2 = st.number_input("Post-Prandial Sugar", 50, 400, 140)
+    triglyceride = st.number_input("Triglycerides", 50, 600, 150)
 
-pp2 = st.number_input("Post Prandial Blood Sugar (2 hours after meal)")
+with col3:
+    hdl = st.number_input("HDL", 20, 100, 50)
+    chol_hdl = st.number_input("Chol/HDL Ratio", 1.0, 10.0, 4.0)
+    ldl_hdl = st.number_input("LDL/HDL Ratio", 0.5, 10.0, 2.5)
+    tobacco = st.selectbox("Tobacco", ["Never","Low","Moderate","High"])
+    alcohol = st.selectbox("Alcohol", ["Never","Low","Moderate","High"])
+    activity = st.selectbox("Physical Activity", ["Low","Moderate"])
 
-fbs = st.number_input("Fasting Blood Sugar")
-
-bmi = st.number_input("Body Mass Index (BMI)")
-
-waist_hip = st.number_input("Waist to Hip Ratio")
-
-triglyceride = st.number_input("Triglyceride Level")
-
-hdl = st.number_input("HDL Cholesterol")
-
-chol_hdl = st.number_input("Total Cholesterol / HDL Ratio")
-
-ldl_hdl = st.number_input("LDL / HDL Ratio")
-
-tobacco = st.selectbox("Tobacco Usage", ["Never","Low","Moderate","High"])
-
-alcohol = st.selectbox("Alcohol Consumption", ["Never","Low","Moderate","High"])
-
-activity = st.selectbox("Physical Activity", ["Low","Moderate"])
-
-# Encoding
+# -------------------- ENCODING --------------------
 gender_val = 1 if gender == "Male" else 0
 
-Tobacco_map = {'Never':0,'Low':1,'Moderate':2,'High':3}
-Alcohol_map = {'Never':0,'Low':1,'Moderate':2,'High':3}
-Activity_map = {'Low':0,'Moderate':1}
+map_dict = {'Never':0,'Low':1,'Moderate':2,'High':3}
+activity_map = {'Low':0,'Moderate':1}
 
-tobacco = Tobacco_map[tobacco]
-alcohol = Alcohol_map[alcohol]
-activity = Activity_map[activity]
+tobacco = map_dict[tobacco]
+alcohol = map_dict[alcohol]
+activity = activity_map[activity]
 
-# Create dataframe
+# -------------------- DATAFRAME --------------------
 patient = pd.DataFrame({
-
-"AGE":[age],
-"GENDER":[gender_val],
-"HBA1C":[hba1c],
-"PP2 [<140 mg/dl]":[pp2],
-"FBS [74-110 mg/dl]":[fbs],
-"BMI":[bmi],
-"WAIST TO HIP RATIO":[waist_hip],
-"TOBACCO":[tobacco],
-"PHYSICAL ACTIVITY":[activity],
-"ALCOHOL":[alcohol],
-"SERUM TRIGLYCERIDE [<150 mg/dl]":[triglyceride],
-"HDL CHOLESTEROL[200 mg/dl]":[hdl],
-"CHOL/HDL":[chol_hdl],
-"LDL/HDL":[ldl_hdl]
-
+    "AGE":[age],
+    "GENDER":[gender_val],
+    "HBA1C":[hba1c],
+    "PP2 [<140 mg/dl]":[pp2],
+    "FBS [74-110 mg/dl]":[fbs],
+    "BMI":[bmi],
+    "WAIST TO HIP RATIO":[waist_hip],
+    "TOBACCO":[tobacco],
+    "PHYSICAL ACTIVITY":[activity],
+    "ALCOHOL":[alcohol],
+    "SERUM TRIGLYCERIDE [<150 mg/dl]":[triglyceride],
+    "HDL CHOLESTEROL[200 mg/dl]":[hdl],
+    "CHOL/HDL":[chol_hdl],
+    "LDL/HDL":[ldl_hdl]
 })
 
-# Align ML features
 patient = patient[rf_model.feature_names_in_]
 
-if st.button("Predict Risk"):
+# -------------------- PREDICTION --------------------
+if st.button("🔍 Predict Risk", use_container_width=True):
 
-    st.subheader("Machine Learning Prediction")
+    if hba1c == 0 or bmi == 0:
+        st.error("HbA1c and BMI must be non-zero.")
+        st.stop()
 
-    ml_pred = rf_model.predict(patient)[0]
-    ml_prob = rf_model.predict_proba(patient)[0][1]
+    colA, colB = st.columns(2)
 
-    if ml_pred == 1:
-        st.error(f"High Diabetes Risk (Probability: {ml_prob:.2f})")
-    else:
-        st.success(f"Low Diabetes Risk (Probability: {ml_prob:.2f})")
+    # ---------- ML MODEL ----------
+    with colA:
+        st.subheader("📊 Current Risk (ML Model)")
 
-    st.write("""
-The machine learning model estimates the probability that the individual belongs
-to the diabetes risk group based on metabolic indicators.
-""")
+        ml_pred = rf_model.predict(patient)[0]
+        ml_prob = rf_model.predict_proba(patient)[0][1]
 
-    # Choose Cox model
-    if gender == "Male":
-        cox_model = cox_male
-    else:
-        cox_model = cox_female
+        if ml_prob > 0.7:
+            st.error(f"🔴 High Risk ({ml_prob:.2%})")
+        elif ml_prob > 0.4:
+            st.warning(f"🟠 Moderate Risk ({ml_prob:.2%})")
+        else:
+            st.success(f"🟢 Low Risk ({ml_prob:.2%})")
 
+        st.progress(float(ml_prob))
+
+    # ---------- COX MODEL ----------
+    with colB:
+        st.subheader("📈 Future Risk (Survival Analysis)")
+
+        cox_model = cox_male if gender == "Male" else cox_female
+        patient_cox = patient[cox_model.params_.index]
+
+        risk = float(cox_model.predict_partial_hazard(patient_cox))
+
+        if risk > 1.5:
+            st.error(f"🔴 High Relative Risk: {risk:.2f}")
+        elif risk > 1:
+            st.warning(f"🟠 Moderate Risk: {risk:.2f}")
+        else:
+            st.success(f"🟢 Low Risk: {risk:.2f}")
+
+    # ---------- SURVIVAL CURVE (FINAL FIX) ----------
+    st.subheader("📉 Survival Curve Comparison")
+
+    cox_model = cox_male if gender == "Male" else cox_female
     patient_cox = patient[cox_model.params_.index]
 
-    st.subheader("Survival Analysis Risk")
-
-    risk = cox_model.predict_partial_hazard(patient_cox)
-
-    st.write("Relative Risk Score:", round(float(risk),4))
-
-    st.write("""
-A relative risk value greater than **1** indicates higher likelihood of developing diabetes
-compared to the average population, while values below **1** indicate lower risk.
-""")
-
-    # Survival curve
-    patient_survival = cox_model.predict_survival_function(patient_cox)
     baseline_survival = cox_model.baseline_survival_
 
+    # Get raw hazard
+    risk_patient = float(cox_model.predict_partial_hazard(patient_cox))
+
+    #  NORMALIZATION (KEY FIX)
+    risk_patient = np.clip(risk_patient, 0.5, 2.0)
+
+    risk_low = risk_patient * 0.8
+    risk_high = risk_patient * 1.2
+
+    # Generate curves
+    patient_survival = baseline_survival ** risk_patient
+    low_surv = baseline_survival ** risk_low
+    high_surv = baseline_survival ** risk_high
+
+    # Plot
     fig, ax = plt.subplots()
 
-    baseline_survival.plot(ax=ax,label="Average Population Risk",color="blue")
-    patient_survival.plot(ax=ax,label="Patient Risk",color="red")
+    baseline_survival.plot(ax=ax)
+    patient_survival.plot(ax=ax)
+    low_surv.plot(ax=ax)
+    high_surv.plot(ax=ax)
 
-    plt.title("Probability of Remaining Diabetes-Free Over Time")
-    plt.xlabel("Age")
-    plt.ylabel("Survival Probability")
+    ax.set_title("Diabetes-Free Survival Probability")
+    ax.set_xlabel("Age")
+    ax.set_ylabel("Survival Probability")
 
-    plt.legend()
+    ax.legend(["Population", "Patient", "Lower Risk", "Higher Risk"])
 
     st.pyplot(fig)
 
-    st.write("""
-The survival curve represents how the probability of remaining diabetes-free
-changes as age increases for the given patient characteristics.
-A steeper decline indicates higher future risk.
-""")
+    # ---------- INTERPRETATION ----------
+    st.info("""
+    • Population = baseline risk  
+    • Patient = your predicted profile  
+    • Low/High = comparative scenarios  
 
-st.markdown("---")
+    Faster drop = higher diabetes risk over time.
+    """)
 
-st.write("""
-**Disclaimer**
-
-This tool is developed for research and educational purposes.
-It should not be used as a substitute for professional medical diagnosis or treatment.
-""")
+# -------------------- FOOTER --------------------
+st.divider()
+st.caption("⚠️ For educational purposes only. Not a medical diagnosis tool.")
+st.caption("Note: Curves are scaled for interpretability due to proxy time assumption.")
