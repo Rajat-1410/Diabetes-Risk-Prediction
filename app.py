@@ -131,7 +131,7 @@ if st.button("🔍 Predict Risk", use_container_width=True):
     baseline_survival = cox_model.baseline_survival_
 
     # Get raw hazard
-    risk_patient = float(cox_model.predict_partial_hazard(patient_cox))
+    risk_patient = float(cox_model.predict_partial_hazard(patient_cox).values[0])
 
     #  NORMALIZATION (KEY FIX)
     risk_patient = np.clip(risk_patient, 0.5, 2.0)
